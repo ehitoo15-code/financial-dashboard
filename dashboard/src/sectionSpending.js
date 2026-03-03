@@ -1,5 +1,6 @@
 import { formatFullKRW, safe, safeNum, COLORS } from './utils.js';
-import { openModal, formField, formRow, showToast } from './modal.js';
+import { openModal, formField, formRow, showToast, confirmDialog } from './modal.js';
+import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -84,7 +85,9 @@ export function renderSpending(container, data, store) {
     });
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
+    const ok = await confirmDialog('이 지출 내역을 삭제하시겠습니까?', { confirmText: '삭제', danger: true });
+    if (!ok) return;
     store.deleteExpense(id);
     showToast('지출이 삭제되었습니다');
     window.__refreshSection('spending');
@@ -121,7 +124,7 @@ export function renderSpending(container, data, store) {
 
     <div class="summary-grid animate-in animate-delay-2">
       <div class="card">
-        <div class="card-title">📊 지출 구성</div>
+        <div class="card-title">${icons.chartPie()} 지출 구성</div>
         <div class="donut-wrapper">
           <div class="donut-chart-container"><canvas id="spending-donut-2"></canvas></div>
           <div class="donut-legend">
@@ -135,16 +138,16 @@ export function renderSpending(container, data, store) {
         </div>
       </div>
       <div class="card">
-        <div class="card-title">📈 월간 지출 추이</div>
+        <div class="card-title">${icons.chartLine()} 월간 지출 추이</div>
         <div class="chart-container"><canvas id="spending-trend-2"></canvas></div>
       </div>
     </div>
 
     <div class="card animate-in animate-delay-3">
       <div class="card-header-row">
-        <span class="card-title" style="margin-bottom:0">📝 지출 상세 내역 (${items.length}건)</span>
+        <span class="card-title" style="margin-bottom:0">${icons.fileText()} 지출 상세 내역 (${items.length}건)</span>
       </div>
-      ${items.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📭</div><p class="empty-state-text">지출 내역이 없습니다</p></div>' : `
+      ${items.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">${icons.inbox(32)}</div><p class="empty-state-text">지출 내역이 없습니다</p></div>` : `
       <div class="table-wrapper" style="max-height:500px;overflow-y:auto">
         <table class="data-table">
           <thead><tr><th>일자</th><th>항목</th><th class="text-right">금액</th><th>계좌</th><th>상세 내용</th><th></th></tr></thead>

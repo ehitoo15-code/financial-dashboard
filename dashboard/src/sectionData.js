@@ -1,4 +1,5 @@
 import { showToast } from './modal.js';
+import { icons } from './icons.js';
 
 export function renderData(container, excelData, store) {
     container.innerHTML = `
@@ -10,42 +11,42 @@ export function renderData(container, excelData, store) {
         <div class="dm-list animate-in">
             <div class="card dm-card">
                 <div class="dm-info">
-                    <div class="dm-icon" style="background:rgba(49,130,246,0.1);color:#3182f6">💾</div>
+                    <div class="dm-icon" style="background:rgba(49,130,246,0.1);color:#3182f6">${icons.save()}</div>
                     <div class="dm-text">
                         <div class="dm-title">데이터 백업 (내보내기)</div>
                         <p class="dm-desc">현재 브라우저에 저장된 모든 기록을 JSON 파일로 저장합니다. 주기적으로 백업하는 것을 권장합니다.</p>
                     </div>
                 </div>
-                <button id="btn-export" class="btn btn-primary">내 컴퓨터에 백업 파일 저장</button>
+                <button id="btn-export" class="btn btn-primary dm-btn">내 컴퓨터에 백업 파일 저장</button>
             </div>
 
             <div class="card dm-card">
                 <div class="dm-info">
-                    <div class="dm-icon" style="background:rgba(108,92,231,0.1);color:#6c5ce7">📂</div>
+                    <div class="dm-icon" style="background:rgba(108,92,231,0.1);color:#6c5ce7">${icons.folder()}</div>
                     <div class="dm-text">
                         <div class="dm-title">데이터 복구 (불러오기)</div>
                         <p class="dm-desc">이전에 백업한 JSON 파일을 선택하여 데이터를 복원합니다. <strong>주의: 현재 데이터가 덮어씌워집니다.</strong></p>
                     </div>
                 </div>
                 <input type="file" id="file-import" style="display:none" accept=".json">
-                <button id="btn-import-trigger" class="btn btn-neutral">백업 파일 선택 및 복구</button>
+                <button id="btn-import-trigger" class="btn btn-neutral dm-btn">백업 파일 선택 및 복구</button>
             </div>
 
-            <div class="card dm-card dm-card-danger">
+            <div class="card dm-card">
                 <div class="dm-info">
-                    <div class="dm-icon" style="background:rgba(255,71,87,0.1);color:#ff4757">⚠️</div>
+                    <div class="dm-icon" style="background:rgba(255,71,87,0.1);color:#ff4757">${icons.alertTriangle()}</div>
                     <div class="dm-text">
                         <div class="dm-title text-danger">데이터 초기화</div>
                         <p class="dm-desc">모든 수정 사항을 지우고 초기 엑셀 파일 상태로 되돌립니다. 이 작업은 되돌릴 수 없습니다.</p>
                     </div>
                 </div>
-                <button id="btn-reset-excel" class="btn btn-danger">초기화 실행</button>
+                <button id="btn-reset-excel" class="btn btn-danger dm-btn">초기화 실행</button>
             </div>
         </div>
 
         <div class="card dm-notice animate-in animate-delay-1">
             <div class="dm-info" style="align-items:flex-start">
-                <div class="dm-icon" style="background:rgba(253,203,110,0.15);color:#f39c12">🔒</div>
+                <div class="dm-icon" style="background:rgba(253,203,110,0.15);color:#f39c12">${icons.lock()}</div>
                 <div class="dm-text">
                     <div class="dm-title">보안 및 저장 안내</div>
                     <ul class="dm-notice-list">

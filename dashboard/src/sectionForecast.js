@@ -1,4 +1,5 @@
 import { formatFullKRW, formatKRW, formatPercent, getChangeClass, COLORS, calculateXIRR, getMonthlyHistory } from './utils.js';
+import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -15,7 +16,7 @@ export function renderForecast(container, data, store) {
                 <p class="section-subtitle">데이터가 충분하지 않습니다. 월간 기록을 먼저 작성해 주세요.</p>
             </div>
             <div class="empty-state">
-                <div class="empty-state-icon">🔮</div>
+                <div class="empty-state-icon">${icons.crystal(32)}</div>
                 <p class="empty-state-text">통계 데이터가 없습니다.</p>
             </div>
         `;
@@ -84,11 +85,9 @@ export function renderForecast(container, data, store) {
   });
 
   container.innerHTML = `
-        <div class="section-header-row">
-            <div>
-                <h1 class="section-title">자산 목표 및 성과 분석</h1>
-                <p class="section-subtitle">투자 실적(Capital Gain)과 저축(Savings)을 분리하여 성과를 측정합니다.</p>
-            </div>
+        <div class="section-header">
+            <h1 class="section-title">자산 예상 (Forecast)</h1>
+            <p class="section-subtitle">투자 실적(Capital Gain)과 저축(Savings)을 분리하여 성과를 측정합니다.</p>
         </div>
 
         <div class="stats-row animate-in animate-delay-1">
@@ -111,30 +110,30 @@ export function renderForecast(container, data, store) {
 
         <div class="summary-grid animate-in animate-delay-2">
             <div class="card">
-                <div class="card-title">🎯 목표 달성 그래프 (Goal Tracking)</div>
-                <div style="height:320px"><canvas id="goal-tracking-chart"></canvas></div>
+                <div class="card-title">${icons.target()} 목표 달성 그래프 (Goal Tracking)</div>
+                <div class="chart-container"><canvas id="goal-tracking-chart"></canvas></div>
                 <div class="chart-info-box">
-                    <span><strong>실적선</strong>: 자본 순수익(손익+배당) 1년 평균</span>
-                    <span><strong>목표선</strong>: 생활비 수준 vs 현재 급여 수준</span>
+                    <span><strong>실적선:</strong> 자본 순수익(손익+배당) 1년 평균</span>
+                    <span><strong>목표선:</strong> 생활비 수준 vs 현재 급여 수준</span>
                 </div>
             </div>
             <div class="card">
-                <div class="card-title">📈 원금 vs 평가금 (Principal vs Eval)</div>
-                <div style="height:320px"><canvas id="asset-growth-chart"></canvas></div>
+                <div class="card-title">${icons.chartLine()} 원금 vs 평가금 (Principal vs Eval)</div>
+                <div class="chart-container"><canvas id="asset-growth-chart"></canvas></div>
                 <div class="chart-info-box">
                     <span>바 차트는 월별 <strong>배당금</strong>(세후) 수령액입니다.</span>
                 </div>
             </div>
         </div>
 
-        <div class="card animate-in animate-delay-3" style="margin-top:24px">
-            <div class="card-title">⚖️ 벤치마크 성과 비교 (Portfolio vs S&P 500)</div>
-            <div style="height:320px"><canvas id="benchmark-chart"></canvas></div>
+        <div class="card animate-in animate-delay-3" style="margin-top:var(--space-2xl)">
+            <div class="card-title">${icons.trendingUp()} 벤치마크 성과 비교 (Portfolio vs S&P 500)</div>
+            <div class="chart-container"><canvas id="benchmark-chart"></canvas></div>
             <div class="chart-info-box">
                 <span>동일 금액을 <strong>S&P 500</strong>에 투자했을 때와 비교한 초과 수익률(Alpha) 시각화</span>
             </div>
         </div>
-    `;
+  `;
 
   // Charts
 
@@ -157,12 +156,24 @@ export function renderForecast(container, data, store) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, boxHeight: 12, padding: 16, font: { size: 12, family: 'Pretendard', weight: '500' }, color: '#4e5968' }
+        }
+      },
       scales: {
         y: {
           beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          border: { display: false },
           suggestedMax: Math.max(avgMonthlyIncome * 1.2, 5000000),
-          ticks: { callback: v => formatKRW(v) }
+          ticks: { callback: v => formatKRW(v), font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
+        },
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
         }
       }
     }
@@ -181,12 +192,21 @@ export function renderForecast(container, data, store) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, boxHeight: 12, padding: 16, font: { size: 12, family: 'Pretendard', weight: '500' }, color: '#4e5968' } }
+      },
       scales: {
         y: {
           beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          border: { display: false },
           suggestedMax: 10000000,
-          ticks: { callback: v => formatKRW(v) }
+          ticks: { callback: v => formatKRW(v), font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
+        },
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
         },
         yDiv: { position: 'right', display: false, beginAtZero: true }
       }
@@ -205,12 +225,21 @@ export function renderForecast(container, data, store) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, boxHeight: 12, padding: 16, font: { size: 12, family: 'Pretendard', weight: '500' }, color: '#4e5968' } }
+      },
       scales: {
         y: {
           beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          border: { display: false },
           suggestedMax: 10000000,
-          ticks: { callback: v => formatKRW(v) }
+          ticks: { callback: v => formatKRW(v), font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
+        },
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { font: { family: 'Pretendard', size: 11 }, color: '#8b95a1', padding: 8 }
         }
       }
     }

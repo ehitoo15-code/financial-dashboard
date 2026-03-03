@@ -1,5 +1,6 @@
 import { formatKRW, formatFullKRW, formatPercent, getChangeClass, COLORS } from './utils.js';
-import { openModal, formField, formRow, showToast, updateFormField } from './modal.js';
+import { openModal, formField, formRow, showToast, updateFormField, confirmDialog } from './modal.js';
+import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -137,7 +138,9 @@ export function renderSummary(container, data, store) {
     setTimeout(() => runAutoCalc(), 100);
   };
 
-  const deleteMonth = (id) => {
+  const deleteMonth = async (id) => {
+    const ok = await confirmDialog('이 월간 데이터를 삭제하시겠습니까?', { confirmText: '삭제', danger: true });
+    if (!ok) return;
     store.deleteSummaryMonth(id);
     showToast('월간 데이터가 삭제되었습니다');
     window.__refreshSection('summary');
@@ -268,7 +271,7 @@ export function renderSummary(container, data, store) {
       <!-- Card 1: 자산 -->
       <div class="card ac-card">
         <div class="ac-card-header">
-          <span class="ac-card-icon" style="background:rgba(49,130,246,0.1);color:#3182f6">💰</span>
+          <span class="ac-card-icon" style="background:rgba(49,130,246,0.1);color:#3182f6">${icons.wallet()}</span>
           <span class="ac-card-title">자산 현황</span>
         </div>
         <div class="ac-kpi-hero">
@@ -304,7 +307,7 @@ export function renderSummary(container, data, store) {
       <!-- Card 2: 투자자금 -->
       <div class="card ac-card">
         <div class="ac-card-header">
-          <span class="ac-card-icon" style="background:rgba(0,184,148,0.1);color:#00b894">📊</span>
+          <span class="ac-card-icon" style="background:rgba(0,184,148,0.1);color:#00b894">${icons.chartPie()}</span>
           <span class="ac-card-title">투자자금 흐름</span>
         </div>
         <div class="ac-kpi-hero">
@@ -351,7 +354,7 @@ export function renderSummary(container, data, store) {
       <!-- Card 3: 수익 성과 -->
       <div class="card ac-card">
         <div class="ac-card-header">
-          <span class="ac-card-icon" style="background:rgba(108,92,231,0.1);color:#6c5ce7">📈</span>
+          <span class="ac-card-icon" style="background:rgba(108,92,231,0.1);color:#6c5ce7">${icons.chartLine()}</span>
           <span class="ac-card-title">수익 성과</span>
         </div>
         <div class="ac-kpi-row-3">
@@ -397,7 +400,7 @@ export function renderSummary(container, data, store) {
       <!-- Card 4: 수익률 -->
       <div class="card ac-card">
         <div class="ac-card-header">
-          <span class="ac-card-icon" style="background:rgba(253,121,168,0.1);color:#fd79a8">📊</span>
+          <span class="ac-card-icon" style="background:rgba(253,121,168,0.1);color:#fd79a8">${icons.barChart()}</span>
           <span class="ac-card-title">수익률 현황</span>
         </div>
         <div class="ac-return-grid">
@@ -442,7 +445,7 @@ export function renderSummary(container, data, store) {
       <!-- Card 5: 목표 달성 (Full Width) -->
       <div class="card ac-card ac-card-wide">
         <div class="ac-card-header">
-          <span class="ac-card-icon" style="background:rgba(253,203,110,0.15);color:#f39c12">🏁</span>
+          <span class="ac-card-icon" style="background:rgba(253,203,110,0.15);color:#f39c12">${icons.flag()}</span>
           <span class="ac-card-title">목표 달성 현황</span>
         </div>
         <div class="ac-goals-grid">
@@ -519,7 +522,7 @@ export function renderSummary(container, data, store) {
 
     ${months.length === 0 ? `
       <div class="empty-state">
-        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-icon">${icons.chartPie(32)}</div>
         <p class="empty-state-text">월간 자산 기록이 없습니다. "+ 월간 데이터 추가"를 통해 첫 기록을 시작하세요.</p>
       </div>
     ` : `
@@ -573,13 +576,13 @@ export function renderSummary(container, data, store) {
     </div>
 
     <div class="card mb-2xl animate-in animate-delay-4">
-      <div class="card-title">📈 자산 추이</div>
+      <div class="card-title">${icons.chartLine()} 자산 추이</div>
       <div class="chart-container"><canvas id="asset-chart-2"></canvas></div>
     </div>
 
     <div class="card animate-in animate-delay-5">
       <div class="card-header-row">
-        <span class="card-title" style="margin-bottom:0">📊 월별 상세 지표</span>
+        <span class="card-title" style="margin-bottom:0">${icons.barChart()} 월별 상세 지표</span>
       </div>
       <div class="table-wrapper" style="max-height:450px;overflow-y:auto">
         <table class="data-table">

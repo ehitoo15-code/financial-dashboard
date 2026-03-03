@@ -58,16 +58,47 @@ export function closeModal() {
   }
 }
 
-// Confirm dialog
-export function confirmDialog(message) {
+// Confirm dialog — returns Promise<boolean>
+export function confirmDialog(message, { confirmText = '확인', danger = false } = {}) {
   return new Promise((resolve) => {
-    openModal('확인', `
-      <p style="font-size:15px;color:var(--color-text-secondary);margin-bottom:var(--space-xl)">${message}</p>
-    `, () => resolve(true));
+    closeModal();
 
-    // Override cancel to resolve false
-    const cancelBtn = currentModal.querySelector('#modal-cancel-btn');
-    cancelBtn.addEventListener('click', () => resolve(false), { once: true });
+    let resolved = false;
+    const safeResolve = (val) => { if (!resolved) { resolved = true; resolve(val); } };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:400px">
+        <div class="modal-header">
+          <h2 class="modal-title">확인</h2>
+          <button class="modal-close" id="confirm-close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:15px;color:var(--color-text-secondary);line-height:1.6">${message}</p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="confirm-cancel-btn">취소</button>
+            <button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="confirm-ok-btn">${confirmText}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('active'));
+
+    const closeAndResolve = (val) => {
+      overlay.classList.remove('active');
+      setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 200);
+      safeResolve(val);
+    };
+
+    overlay.querySelector('#confirm-ok-btn').addEventListener('click', () => closeAndResolve(true));
+    overlay.querySelector('#confirm-cancel-btn').addEventListener('click', () => closeAndResolve(false));
+    overlay.querySelector('#confirm-close-btn').addEventListener('click', () => closeAndResolve(false));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAndResolve(false); });
   });
 }
 

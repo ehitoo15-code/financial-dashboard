@@ -1,5 +1,6 @@
 import { formatFullKRW, formatDate, formatPercent, getChangeClass, safe, safeNum, COLORS } from './utils.js';
-import { openModal, formField, formRow, showToast } from './modal.js';
+import { openModal, formField, formRow, showToast, confirmDialog } from './modal.js';
+import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -28,27 +29,27 @@ export function renderDividend(container, data, store) {
   const sortedMonths = Object.keys(monthlyMap).sort();
   const sortedYears = Object.keys(annualMap).sort().reverse();
 
-  const openAddModal = () => {
-    openModal('배당금 기록 추가', `
+  const openAddModal = (existing = null) => {
+    openModal(existing ? '배당금 기록 수정' : '배당금 기록 추가', `
       ${formRow(
-      formField('payDate', '지급 일자', 'date', { required: true, value: today }),
-      formField('exDate', '배당락일', 'date', { value: today })
+      formField('payDate', '지급 일자', 'date', { required: true, value: existing?.payDate || today }),
+      formField('exDate', '배당락일', 'date', { value: existing?.exDate || today })
     )}
       ${formRow(
-      formField('name', '종목 이름', 'text', { required: true, placeholder: 'SCHD' }),
-      formField('ticker', '티커', 'text', { placeholder: 'SCHD' })
+      formField('name', '종목 이름', 'text', { required: true, value: existing?.name || '', placeholder: 'SCHD' }),
+      formField('ticker', '티커', 'text', { value: existing?.ticker || '', placeholder: 'SCHD' })
     )}
       ${formRow(
-      formField('account', '계좌 구분', 'select', { selectOptions: ['연저펀1', '연저펀2', 'IRP', 'ISA 중개형', '일반 국내', '일반 해외'] }),
-      formField('qty', '보유 수량', 'number', { required: true, placeholder: '100', step: '0.0001' })
+      formField('account', '계좌 구분', 'select', { value: existing?.account || '', selectOptions: ['연저펀1', '연저펀2', 'IRP', 'ISA 중개형', '일반 국내', '일반 해외'] }),
+      formField('qty', '보유 수량', 'number', { required: true, value: existing?.qty || '', placeholder: '100', step: '0.0001' })
     )}
       ${formRow(
-      formField('grossAmount', '배당 총액 ($/₩)', 'number', { required: true, placeholder: '100.0', step: '0.01' }),
-      formField('netAmount', '실수령액 (원환산)', 'number', { required: true, placeholder: '140000', step: '1' })
+      formField('grossAmount', '배당 총액 ($/₩)', 'number', { required: true, value: existing?.grossAmount || '', placeholder: '100.0', step: '0.01' }),
+      formField('netAmount', '실수령액 (원환산)', 'number', { required: true, value: existing?.netAmount || '', placeholder: '140000', step: '1' })
     )}
-      ${formField('perShare', '주당 배당금', 'number', { placeholder: '0.75', step: '0.0001' })}
+      ${formField('perShare', '주당 배당금', 'number', { value: existing?.perShare || '', placeholder: '0.75', step: '0.0001' })}
     `, (formData) => {
-      store.addDividend({
+      const payload = {
         payDate: formData.payDate,
         exDate: formData.exDate,
         account: formData.account,
@@ -58,13 +59,21 @@ export function renderDividend(container, data, store) {
         grossAmount: Number(formData.grossAmount),
         netAmount: Number(formData.netAmount),
         perShare: Number(formData.perShare || 0)
-      });
-      showToast('배당 기록이 추가되었습니다');
+      };
+      if (existing) {
+        store.updateDividend(existing.id, payload);
+        showToast('배당 기록이 수정되었습니다');
+      } else {
+        store.addDividend(payload);
+        showToast('배당 기록이 추가되었습니다');
+      }
       window.__refreshSection('dividend');
     });
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
+    const ok = await confirmDialog('이 배당 기록을 삭제하시겠습니까?', { confirmText: '삭제', danger: true });
+    if (!ok) return;
     store.deleteDividend(id);
     showToast('배당 기록이 삭제되었습니다');
     window.__refreshSection('dividend');
@@ -96,7 +105,7 @@ export function renderDividend(container, data, store) {
 
     <div class="summary-grid animate-in animate-delay-2">
       <div class="card">
-        <div class="card-title">📊 월간 배당금 추이</div>
+        <div class="card-title">${icons.barChart()} 월간 배당금 추이</div>
         <div class="chart-container"><canvas id="dividend-chart-2"></canvas></div>
       </div>
       <div class="card">
@@ -131,7 +140,7 @@ export function renderDividend(container, data, store) {
                 <td class="text-right">${d.qty || 0}</td>
                 <td class="text-right">${d.grossAmount || 0}</td>
                 <td class="text-right" style="font-weight:600;color:var(--color-primary)">${formatFullKRW(d.netAmount)}</td>
-                <td><button class="btn-delete" data-delete-div="${d.id}" title="삭제"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></td>
+                <td><div style="display:flex;gap:4px"><button class="btn-delete" data-edit-div="${d.id}" title="수정" style="color:var(--color-text-secondary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn-delete" data-delete-div="${d.id}" title="삭제"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div></td>
               </tr>
             `).join('')}
           </tbody>
@@ -140,7 +149,10 @@ export function renderDividend(container, data, store) {
     </div>
   `;
 
-  container.querySelector('#btn-add-dividend').addEventListener('click', openAddModal);
+  container.querySelector('#btn-add-dividend').addEventListener('click', () => openAddModal());
+  container.querySelectorAll('[data-edit-div]').forEach(btn => {
+    btn.addEventListener('click', () => openAddModal(items.find(d => d.id === Number(btn.dataset.editDiv))));
+  });
   container.querySelectorAll('[data-delete-div]').forEach(btn => {
     btn.addEventListener('click', () => deleteItem(Number(btn.dataset.deleteDiv)));
   });

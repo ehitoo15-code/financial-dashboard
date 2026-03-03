@@ -1,7 +1,9 @@
 import { formatPercent, getChangeClass, safe, safeNum } from './utils.js';
 import { getCellValue, getRow } from './dataLoader.js';
+import { icons } from './icons.js';
+import { getExchangeRate } from './stockService.js';
 
-export function renderMarket(container, data) {
+export async function renderMarket(container, data) {
   const sheet = data['참고 자료'];
   if (!sheet) { container.innerHTML = '<div class="empty-state"><p>데이터 없음</p></div>'; return; }
 
@@ -62,13 +64,27 @@ export function renderMarket(container, data) {
   const indexItems = sectors.filter(s => ['S&P500', 'QQQ', '다우존스', '러셀2000', '슈드', '장기채권'].includes(s.name));
   const sectorItems = sectors.filter(s => !specialItems.includes(s) && !indexItems.includes(s));
 
+  // If no exchange rate in data, fetch real-time USD/KRW
+  if (!specialItems.find(s => s.name === '환율')) {
+    try {
+      const rate = await getExchangeRate();
+      specialItems.unshift({
+        name: '원/달러 환율', ticker: 'USD/KRW',
+        startPrice: 0, currentPrice: rate, priceChange: 0,
+        changePct: 0, valueChange: 0, returnPct: 0,
+        vs52High: null, vs52Low: null,
+        sentiment240: '-', sentiment120: '-', sentiment20: '-'
+      });
+    } catch (e) { /* silently fail */ }
+  }
+
   const renderMarketCard = (s) => `
     <div class="market-item">
       <div class="market-item-header">
         <span class="market-item-name">${s.name}</span>
         <span class="market-item-ticker">${s.ticker}</span>
       </div>
-      <div class="market-item-price">${s.name === '환율' ? '₩' : '$'}${s.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+      <div class="market-item-price">${(s.name === '환율' || s.name === '원/달러 환율') ? '₩' : '$'}${s.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
       <div class="market-item-change ${getChangeClass(s.priceChange)}">
         ${s.priceChange >= 0 ? '+' : ''}${s.priceChange.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${formatPercent(s.changePct)})
       </div>
@@ -95,7 +111,7 @@ export function renderMarket(container, data) {
       ${specialItems.map(s => `
         <div class="metric-card">
           <div class="metric-label">${s.name} (${s.ticker})</div>
-          <div class="metric-value">${s.name === '환율' ? '₩' : '$'}${s.currentPrice.toLocaleString()}</div>
+          <div class="metric-value">${(s.name === '환율' || s.name === '원/달러 환율') ? '₩' : '$'}${s.currentPrice.toLocaleString()}</div>
           <div class="metric-sub ${getChangeClass(s.changePct)}">${formatPercent(s.changePct)}</div>
         </div>
       `).join('')}
@@ -103,19 +119,19 @@ export function renderMarket(container, data) {
 
     ${indexItems.length > 0 ? `
     <div class="card mb-2xl animate-in animate-delay-2">
-      <div class="card-title">📈 주요 지수</div>
+      <div class="card-title">${icons.chartLine()} 주요 지수</div>
       <div class="market-grid">${indexItems.map(renderMarketCard).join('')}</div>
     </div>` : ''}
 
     ${sectorItems.length > 0 ? `
     <div class="card mb-2xl animate-in animate-delay-3">
-      <div class="card-title">🏭 섹터별 현황</div>
+      <div class="card-title">${icons.factory()} 섹터별 현황</div>
       <div class="market-grid">${sectorItems.map(renderMarketCard).join('')}</div>
     </div>` : ''}
 
     ${tickers.length > 0 ? `
     <div class="card animate-in animate-delay-4">
-      <div class="card-title">📊 주요 ETF 누적 수익률 (기준일 대비)</div>
+      <div class="card-title">${icons.barChart()} 주요 ETF 누적 수익률 (기준일 대비)</div>
       <div class="table-wrapper">
         <table class="data-table">
           <thead><tr><th>티커</th><th class="text-right">최근 수익률</th><th>상태</th></tr></thead>

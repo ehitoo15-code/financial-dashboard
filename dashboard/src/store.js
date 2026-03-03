@@ -165,6 +165,10 @@ class DataStore {
         this._data.incomes = this._data.incomes.filter(i => i.id !== id);
         this.save();
     }
+    updateIncome(id, updates) {
+        const idx = this._data.incomes.findIndex(i => i.id === id);
+        if (idx >= 0) { Object.assign(this._data.incomes[idx], updates); this.save(); }
+    }
 
     // --- CRUD: Expenses ---
     getExpenses() { return this._data.expenses || []; }
@@ -211,6 +215,10 @@ class DataStore {
     deleteDividend(id) {
         this._data.dividends = this._data.dividends.filter(d => d.id !== id);
         this.save();
+    }
+    updateDividend(id, updates) {
+        const idx = this._data.dividends.findIndex(d => d.id === id);
+        if (idx >= 0) { Object.assign(this._data.dividends[idx], updates); this.save(); }
     }
 
     // --- CRUD: Holdings ---

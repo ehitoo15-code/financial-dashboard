@@ -66,7 +66,39 @@ function switchSection(sectionId) {
 
 // Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => switchSection(item.dataset.section));
+    item.addEventListener('click', () => {
+        switchSection(item.dataset.section);
+        // Close mobile sidebar on navigation
+        closeMobileSidebar();
+    });
+});
+
+// Mobile sidebar toggle
+function openMobileSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-overlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', openMobileSidebar);
+}
+
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+if (sidebarOverlay) {
+    sidebarOverlay.addEventListener('click', closeMobileSidebar);
+}
+
+// Auto-close mobile sidebar on desktop resize
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeMobileSidebar();
 });
 
 // Show app, hide login
@@ -151,13 +183,52 @@ document.getElementById('btn-guest').addEventListener('click', () => {
     initDashboard(null);
 });
 
-// Logout
-document.getElementById('btn-logout').addEventListener('click', async () => {
-    await logout();
-    isGuest = false;
-    renderedSections.clear();
-    showLogin();
+// Logout with confirmation modal
+document.getElementById('btn-logout').addEventListener('click', () => {
+    showLogoutModal();
 });
+
+function showLogoutModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'logout-modal-overlay';
+    overlay.innerHTML = `
+        <div class="logout-modal">
+            <div class="logout-modal-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </div>
+            <h3 class="logout-modal-title">로그아웃</h3>
+            <p class="logout-modal-desc">정말 로그아웃 하시겠습니까?<br>클라우드에 저장된 데이터는 유지됩니다.</p>
+            <div class="logout-modal-actions">
+                <button class="logout-modal-btn cancel" id="logout-cancel">취소</button>
+                <button class="logout-modal-btn confirm" id="logout-confirm">로그아웃</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('active'));
+
+    document.getElementById('logout-cancel').addEventListener('click', () => {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 200);
+    });
+    document.getElementById('logout-confirm').addEventListener('click', async () => {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 200);
+        await logout();
+        isGuest = false;
+        renderedSections.clear();
+        showLogin();
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 200);
+        }
+    });
+}
 
 // Auth state listener
 onAuth((user) => {

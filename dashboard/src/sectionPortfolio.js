@@ -1,6 +1,7 @@
 import { formatFullKRW, formatPercent, getChangeClass, safe, safeNum, COLORS } from './utils.js';
 import { openModal, formField, formRow, showToast, updateFormField } from './modal.js';
 import { searchStocks, fetchCurrentPrice, getExchangeRate } from './stockService.js';
+import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
@@ -210,7 +211,7 @@ export function renderPortfolio(container, data, store) {
 
     <div class="summary-grid animate-in animate-delay-2">
       <div class="card">
-        <div class="card-title">📊 자산 배분 (그룹별)</div>
+        <div class="card-title">${icons.chartPie()} 자산 배분 (그룹별)</div>
         <div class="donut-wrapper">
           <div class="donut-chart-container"><canvas id="portfolio-donut-2"></canvas></div>
           <div class="donut-legend">
@@ -224,14 +225,14 @@ export function renderPortfolio(container, data, store) {
         </div>
       </div>
       <div class="card">
-        <div class="card-title">💼 계좌별 현황</div>
+        <div class="card-title">${icons.briefcase()} 계좌별 현황</div>
         <div id="account-list"></div>
       </div>
     </div>
 
     <div class="card animate-in animate-delay-3">
       <div class="card-header-row">
-        <span class="card-title" style="margin-bottom:0">📋 전체 보유 종목 (${items.length}개)</span>
+        <span class="card-title" style="margin-bottom:0">${icons.clipboard()} 전체 보유 종목 (${items.length}개)</span>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
