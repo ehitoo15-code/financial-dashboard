@@ -1,5 +1,7 @@
-// LocalStorage-based data store for financial dashboard
-// Initial seed from Excel, then all CRUD via localStorage
+// Hybrid data store for financial dashboard
+// Saves to both localStorage (offline) and Firestore (cloud sync)
+
+import { db, isConfigured } from './firebase.js';
 
 const STORAGE_KEY = 'financial_dashboard_data';
 
@@ -45,6 +47,51 @@ class DataStore {
             this._data.meta.lastUpdated = new Date().toISOString();
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this._data));
         } catch (e) { console.error('Failed to save to localStorage:', e); }
+
+        // Cloud sync (non-blocking)
+        if (this._uid) {
+            this._saveToCloud().catch(e => console.warn('Cloud save failed:', e));
+        }
+    }
+
+    /** Set the user ID for cloud sync */
+    setUser(uid) {
+        this._uid = uid;
+    }
+
+    /** Save to Firestore */
+    async _saveToCloud() {
+        if (!this._uid || !this._data || !isConfigured) return;
+        const { doc, setDoc } = await import('firebase/firestore');
+        const ref = doc(db, 'users', this._uid);
+        await setDoc(ref, { data: JSON.stringify(this._data) }, { merge: true });
+    }
+
+    /** Load from Firestore */
+    async loadFromCloud() {
+        if (!this._uid || !isConfigured) return false;
+        try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const ref = doc(db, 'users', this._uid);
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                const cloudData = JSON.parse(snap.data().data);
+                // Cloud data wins if it's newer
+                const cloudTime = new Date(cloudData?.meta?.lastUpdated || 0).getTime();
+                const localTime = new Date(this._data?.meta?.lastUpdated || 0).getTime();
+                if (cloudTime > localTime) {
+                    this._data = cloudData;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(this._data));
+                    return true;
+                }
+            }
+        } catch (e) { console.warn('Cloud load failed:', e); }
+        return false;
+    }
+
+    /** Force push local data to cloud */
+    async pushToCloud() {
+        await this._saveToCloud();
     }
 
     getData() { return this._data; }

@@ -10,8 +10,10 @@ import { renderIncome } from './src/sectionIncome.js';
 import { renderForecast } from './src/sectionForecast.js';
 import { renderMarket } from './src/sectionMarket.js';
 import { renderData } from './src/sectionData.js';
+import { onAuth, loginWithGoogle, logout } from './src/auth.js';
 
 let excelData = null;
+let isGuest = false;
 
 const sectionRenderers = {
     summary: renderSummary,
@@ -42,7 +44,6 @@ function renderSection(sectionId) {
     if (!container || !renderer) return;
 
     try {
-        // Pass both store and excelData for sections that still use raw excel
         renderer(container, excelData, store);
         renderedSections.add(sectionId);
     } catch (e) {
@@ -68,23 +69,58 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => switchSection(item.dataset.section));
 });
 
-// Initialize
-async function init() {
+// Show app, hide login
+function showApp(user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+
+    const userInfo = document.getElementById('user-info');
+    if (user && !isGuest) {
+        userInfo.style.display = 'flex';
+        document.getElementById('user-avatar').src = user.photoURL || '';
+        document.getElementById('user-name').textContent = user.displayName || user.email || '';
+    } else {
+        userInfo.style.display = 'none';
+    }
+}
+
+// Show login, hide app
+function showLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+}
+
+// Initialize dashboard
+async function initDashboard(user) {
     const loadingScreen = document.getElementById('loading-screen');
+    loadingScreen.classList.remove('hidden');
 
     try {
         excelData = await loadExcelData();
 
-        // Check if we have stored data
         const hasStoredData = store.load();
         if (!hasStoredData || !store.isInitialized()) {
             store.seedFromExcel(excelData);
+        }
+
+        // Cloud sync: if logged in, try loading from Firestore
+        if (user && !isGuest) {
+            store.setUser(user.uid);
+            const cloudLoaded = await store.loadFromCloud();
+            if (cloudLoaded) {
+                console.log('☁️ 클라우드에서 데이터 동기화 완료');
+            } else {
+                // Push local data to cloud for the first time
+                await store.pushToCloud();
+                console.log('☁️ 로컬 데이터를 클라우드에 업로드');
+            }
         }
 
         const now = new Date();
         document.getElementById('update-time').textContent =
             `마지막 업데이트\n${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+        renderedSections.clear();
         switchSection('summary');
         loadingScreen.classList.add('hidden');
         setTimeout(() => loadingScreen.remove(), 500);
@@ -100,7 +136,39 @@ async function init() {
     }
 }
 
+// Login button handlers
+document.getElementById('btn-google-login').addEventListener('click', async () => {
+    try {
+        await loginWithGoogle();
+    } catch (e) {
+        console.error('Login failed:', e);
+    }
+});
+
+document.getElementById('btn-guest').addEventListener('click', () => {
+    isGuest = true;
+    showApp(null);
+    initDashboard(null);
+});
+
+// Logout
+document.getElementById('btn-logout').addEventListener('click', async () => {
+    await logout();
+    isGuest = false;
+    renderedSections.clear();
+    showLogin();
+});
+
+// Auth state listener
+onAuth((user) => {
+    if (user && !isGuest) {
+        showApp(user);
+        initDashboard(user);
+    } else if (!isGuest) {
+        showLogin();
+    }
+});
+
 // Export for section modules to use
 window.__refreshSection = refreshSection;
 
-init();
