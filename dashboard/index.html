@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="금융 자산 기록 대시보드 - 토스 스타일의 자산 관리 및 투자 현황 대시보드" />
+  <title>금융 자산 기록 대시보드</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <div id="app">
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">₩</div>
+          <span class="logo-text">내 자산</span>
+        </div>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item active" data-section="summary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          <span>자산 요약</span>
+        </li>
+        <li class="nav-item" data-section="portfolio">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a10 10 0 0 1 10 10" />
+            <path d="M12 2v10l7.07 7.07" />
+          </svg>
+          <span>주식 계좌</span>
+        </li>
+        <li class="nav-item" data-section="trading">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          <span>거래 기록</span>
+        </li>
+        <li class="nav-item" data-section="dividend">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+            <line x1="1" y1="10" x2="23" y2="10" />
+          </svg>
+          <span>배당 기록</span>
+        </li>
+        <li class="nav-item" data-section="spending">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>지출 관리</span>
+        </li>
+        <li class="nav-item" data-section="income">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+          <span>수입 내역</span>
+        </li>
+        <li class="nav-item" data-section="forecast">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+            <polyline points="17 6 23 6 23 12" />
+          </svg>
+          <span>자산 예상</span>
+        </li>
+        <li class="nav-item" data-section="market">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span>참고 자료</span>
+        </li>
+        <li class="nav-item" data-section="data">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span>데이터 관리</span>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="update-info" id="update-time">데이터 로딩 중...</div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+      <!-- Loading State -->
+      <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>데이터를 불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- Section: Summary -->
+      <section id="section-summary" class="section active"></section>
+
+      <!-- Section: Portfolio -->
+      <section id="section-portfolio" class="section"></section>
+
+      <!-- Section: Trading -->
+      <section id="section-trading" class="section"></section>
+
+      <!-- Section: Dividend -->
+      <section id="section-dividend" class="section"></section>
+
+      <!-- Section: Spending -->
+      <section id="section-spending" class="section"></section>
+
+      <!-- Section: Income -->
+      <section id="section-income" class="section"></section>
+
+      <!-- Section: Forecast -->
+      <section id="section-forecast" class="section"></section>
+
+      <!-- Section: Market -->
+      <section id="section-market" class="section"></section>
+
+      <!-- Section: Data Management -->
+      <section id="section-data" class="section"></section>
+    </main>
+  </div>
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>
