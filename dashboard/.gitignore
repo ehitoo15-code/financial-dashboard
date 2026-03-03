@@ -26,3 +26,4 @@ dist-ssr
 # Data files (Privacy)
 public/*.xlsx
 *.xlsx
+.env
