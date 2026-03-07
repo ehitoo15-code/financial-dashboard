@@ -46,20 +46,46 @@ const POPULAR_TICKERS = [
     { name: '크래프톤', ticker: '259960', exchange: 'KRX' },
     { name: '펄어비스', ticker: '263750', exchange: 'KOSDAQ' },
 
-    // ── 국내 ETF - 미국 지수 ────────────────────────────
+    // ── 국내 ETF - TIGER 미국 ──────────────────────────
     { name: 'TIGER 미국S&P500', ticker: '360750', exchange: 'KRX' },
     { name: 'TIGER 미국나스닥100', ticker: '133690', exchange: 'KRX' },
+    { name: 'TIGER 미국나스닥100TR(H)', ticker: '396500', exchange: 'KRX' },
     { name: 'TIGER 미국배당다우존스', ticker: '458730', exchange: 'KRX' },
+    { name: 'TIGER 미국배당+3%프리미엄다우존스', ticker: '481490', exchange: 'KRX' },
+    { name: 'TIGER 미국나스닥100+15%프리미엄', ticker: '472160', exchange: 'KRX' },
     { name: 'TIGER 미국테크TOP10 INDXX', ticker: '381170', exchange: 'KRX' },
+    { name: 'TIGER 미국필라델피아반도체나스닥', ticker: '381180', exchange: 'KRX' },
+
+    // ── 국내 ETF - KODEX 미국 ──────────────────────────
     { name: 'KODEX 미국S&P500TR', ticker: '379800', exchange: 'KRX' },
     { name: 'KODEX 미국나스닥100TR', ticker: '379810', exchange: 'KRX' },
-    { name: 'KINDEX 미국S&P500', ticker: '360200', exchange: 'KRX' },
+    { name: 'KODEX 미국배당다우존스', ticker: '455890', exchange: 'KRX' },
+    { name: 'KODEX 미국반도체MV', ticker: '394670', exchange: 'KRX' },
+
+    // ── 국내 ETF - ACE 미국 ────────────────────────────
     { name: 'ACE 미국S&P500', ticker: '360200', exchange: 'KRX' },
-    { name: 'TIGER 미국배당+3%프리미엄다우존스', ticker: '481490', exchange: 'KRX' },
+    { name: 'ACE 미국나스닥100', ticker: '367380', exchange: 'KRX' },
+    { name: 'ACE 미국나스닥100TR', ticker: '396520', exchange: 'KRX' },
     { name: 'ACE 미국배당다우존스', ticker: '402970', exchange: 'KRX' },
-    { name: 'SOL 미국배당다우존스', ticker: '446720', exchange: 'KRX' },
+    { name: 'ACE 미국빅테크TOP7 Plus', ticker: '465590', exchange: 'KRX' },
+    { name: 'ACE 미국30년국채액티브(H)', ticker: '453010', exchange: 'KRX' },
+    { name: 'ACE KRX금현물', ticker: '411060', exchange: 'KRX' },
+
+    // ── 국내 ETF - RISE(KB) 미국 ──────────────────────
+    { name: 'RISE 미국S&P500', ticker: '360310', exchange: 'KRX' },
+    { name: 'RISE 미국나스닥100', ticker: '367470', exchange: 'KRX' },
     { name: 'RISE 미국배당다우존스', ticker: '441680', exchange: 'KRX' },
-    { name: 'TIGER 미국나스닥100+15%프리미엄', ticker: '472160', exchange: 'KRX' },
+    { name: 'RISE 미국배당+7%프리미엄다우존스', ticker: '476050', exchange: 'KRX' },
+
+    // ── 국내 ETF - SOL(신한) 미국 ─────────────────────
+    { name: 'SOL 미국S&P500', ticker: '447770', exchange: 'KRX' },
+    { name: 'SOL 미국나스닥100', ticker: '449170', exchange: 'KRX' },
+    { name: 'SOL 미국배당다우존스', ticker: '446720', exchange: 'KRX' },
+    { name: 'SOL 미국배당다우존스(H)', ticker: '469670', exchange: 'KRX' },
+
+    // ── 국내 ETF - KINDEX(한투) 미국 ──────────────────
+    { name: 'KINDEX 미국S&P500', ticker: '360750', exchange: 'KRX' },
+    { name: 'KINDEX 미국나스닥100', ticker: '368590', exchange: 'KRX' },
 
     // ── 국내 ETF - 국내 지수 ────────────────────────────
     { name: 'KODEX 200', ticker: '069500', exchange: 'KRX' },
@@ -67,21 +93,23 @@ const POPULAR_TICKERS = [
     { name: 'KODEX 코스닥150', ticker: '229200', exchange: 'KRX' },
     { name: 'TIGER 코스닥150', ticker: '232080', exchange: 'KRX' },
     { name: 'KODEX 레버리지', ticker: '122630', exchange: 'KRX' },
+    { name: 'TIGER 레버리지', ticker: '123320', exchange: 'KRX' },
     { name: 'KODEX 인버스', ticker: '114800', exchange: 'KRX' },
+    { name: 'KODEX 200선물인버스2X', ticker: '252670', exchange: 'KRX' },
 
-    // ── 국내 ETF - 채권/현금 ───────────────────────────
+    // ── 국내 ETF - 채권/현금성 ─────────────────────────
     { name: 'KODEX KOFR금리액티브(합성)', ticker: '453850', exchange: 'KRX' },
     { name: 'TIGER CD금리투자KIS(합성)', ticker: '462340', exchange: 'KRX' },
     { name: 'KODEX 단기채권PLUS', ticker: '214980', exchange: 'KRX' },
-    { name: 'ACE 미국30년국채액티브(H)', ticker: '453010', exchange: 'KRX' },
     { name: 'TIGER 미국채10년선물', ticker: '305080', exchange: 'KRX' },
     { name: 'KODEX 미국채울트라30년선물(H)', ticker: '304660', exchange: 'KRX' },
+    { name: 'ACE 미국30년국채액티브(H)', ticker: '453010', exchange: 'KRX' },
 
-    // ── 국내 ETF - 글로벌/테마 ─────────────────────────
+    // ── 국내 ETF - 글로벌/원자재 ───────────────────────
     { name: 'TIGER 차이나CSI300', ticker: '192090', exchange: 'KRX' },
     { name: 'TIGER 일본니케이225', ticker: '241180', exchange: 'KRX' },
     { name: 'TIGER 금은선물(H)', ticker: '284430', exchange: 'KRX' },
-    { name: 'ACE KRX금현물', ticker: '411060', exchange: 'KRX' },
+    { name: 'KODEX 골드선물(H)', ticker: '132030', exchange: 'KRX' },
 
     // ── 미국 주식 - 빅테크/성장주 ──────────────────────
     { name: 'Apple Inc.', ticker: 'AAPL', exchange: 'NASDAQ' },
