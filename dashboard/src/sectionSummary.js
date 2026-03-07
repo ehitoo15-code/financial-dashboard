@@ -1,5 +1,5 @@
 import { formatKRW, formatFullKRW, formatPercent, getChangeClass, COLORS } from './utils.js';
-import { openModal, formField, formRow, showToast, updateFormField, confirmDialog } from './modal.js';
+import { openModal, formField, formRow, showToast, confirmDialog } from './modal.js';
 import { icons } from './icons.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
@@ -24,118 +24,92 @@ export function renderSummary(container, data, store) {
 
   const thisMonth = new Date().toISOString().substring(0, 7);
 
-  // --- Modal Logic ---
+  // --- Modal Logic (Simplified: only yearMonth + cashTotal) ---
   const openAddModal = (existing = null) => {
-    openModal(existing ? '월간 자산 데이터 수정' : '월간 자산 데이터 추가', `
-      <div style="background:var(--color-bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between">
-        <span class="text-sm font-medium">다른 메뉴의 데이터를 자동으로 계산할까요?</span>
-        <button id="btn-autofill" class="btn btn-neutral btn-sm">데이터 불러오기</button>
+    const fmtPreview = (v) => v ? formatFullKRW(v) : '-';
+    const fmtPctPreview = (v) => v ? formatPercent(v) : '-';
+
+    openModal(existing ? '월간 자산 데이터 수정' : '이번 달 마감', `
+      <div style="background:var(--color-bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:18px">📊</span>
+          <span class="text-sm font-medium">현금성 자산 잔액만 입력하면 나머지는 자동 계산됩니다</span>
+        </div>
+        <p style="font-size:11px;color:var(--color-text-tertiary);margin:0">
+          투자 합계 = 보유 종목 평가금 합계 (연금 제외)&nbsp;|&nbsp;연금 = 연저펀·IRP 종목 합계&nbsp;|&nbsp;수입/지출 = 기록된 내역 합산
+        </p>
       </div>
       ${formField('yearMonth', '기록 년월', 'month', { required: true, value: existing?.yearMonth || thisMonth })}
-      ${formField('income', '월 총 소득 (원)', 'number', { value: existing?.income || '', placeholder: '5000000', step: '1' })}
-      <div class="divider"></div>
-      ${formRow(
-      formField('investTotal', '투자 합계 (원)', 'number', { value: existing?.investTotal || '', placeholder: '30000000', step: '1' }),
-      formField('cashTotal', '현금성 자산 (원)', 'number', { value: existing?.cashTotal || '', placeholder: '10000000', step: '1' })
-    )}
-      ${formField('pensionTotal', '연금 합계 (원)', 'number', { value: existing?.pensionTotal || '', placeholder: '10000000', step: '1' })}
-      ${formField('totalAssets', '총 자산 합계 (원화, 자동계산)', 'number', { required: true, value: existing?.totalAssets || '', placeholder: '계산됨', readonly: true })}
-      
-      <div class="divider"></div>
-      ${formField('savings', '저축 금액 (원, 소득-지출)', 'number', { value: existing?.savings || '', placeholder: '1000000', step: '1' })}
-      
-      ${formRow(
-      formField('monthlyReturn', '월간 순 수익률 (%)', 'number', { value: existing ? (existing.monthlyReturn * 100).toFixed(2) : '', placeholder: '2.5', step: '0.01' }),
-      formField('savingsRate', '저축률 (자동계산, %)', 'number', { value: existing ? (existing.savingsRate * 100).toFixed(1) : '', readonly: true })
-    )}
-      ${formRow(
-      formField('monthlyGrowth', '월간 자산 증가율 (자동계산, %)', 'number', { value: existing ? (existing.monthlyGrowth * 100).toFixed(2) : '', readonly: true }),
-      formField('cumGrowth', '누적 자산 증가율 (자동계산, %)', 'number', { value: existing ? (existing.cumGrowth * 100).toFixed(2) : '', readonly: true })
-    )}
-      <p style="font-size:11px; color:var(--color-text-tertiary); margin-top:8px">
-        * <strong>데이터 불러오기</strong>를 누르면 해당 월의 수입/지출/배당 내역을 합산해 자동으로 입력합니다.
-      </p>
-    `, (formData) => {
-      const payload = {
-        yearMonth: formData.yearMonth,
-        income: Number(formData.income || 0),
-        totalAssets: Number(formData.totalAssets || 0),
-        investTotal: Number(formData.investTotal || 0),
-        cashTotal: Number(formData.cashTotal || 0),
-        pensionTotal: Number(formData.pensionTotal || 0),
-        monthlyReturn: Number(formData.monthlyReturn || 0) / 100,
-        cumReturn: Number(formData.cumGrowth || 0) / 100,
-        monthlyGrowth: Number(formData.monthlyGrowth || 0) / 100,
-        cumGrowth: Number(formData.cumGrowth || 0) / 100,
-        savings: Number(formData.savings || 0),
-        savingsRate: Number(formData.savingsRate || 0) / 100,
-      };
+      ${formField('cashTotal', '현금성 자산 잔액 (원)', 'number', { required: true, value: existing?.cashTotal || '', placeholder: '은행 입출금 계좌 총 잔액', step: '1' })}
 
-      if (existing) {
-        store.updateSummaryMonth(existing.id, payload);
-        showToast('월간 데이터가 수정되었습니다');
-      } else {
-        store.addSummaryMonth(payload);
-        showToast('월간 데이터가 추가되었습니다');
-      }
+      <div id="preview-section" style="margin-top:16px;border:1px solid var(--color-border-light);border-radius:12px;padding:16px;background:var(--color-surface-secondary)">
+        <div style="font-weight:600;font-size:13px;margin-bottom:12px;color:var(--color-text-secondary)">🔄 자동 계산 미리보기</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">투자 합계</span>
+            <span id="pv-invest" style="font-weight:600">-</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">연금 합계</span>
+            <span id="pv-pension" style="font-weight:600">-</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">수입 합계</span>
+            <span id="pv-income" style="font-weight:600;color:var(--color-success)">-</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">저축 금액</span>
+            <span id="pv-savings" style="font-weight:600">-</span>
+          </div>
+          <div style="grid-column:span 2;display:flex;justify-content:space-between;padding:8px 10px;background:var(--color-primary);border-radius:8px;color:#fff">
+            <span style="font-weight:500">총 자산</span>
+            <span id="pv-total" style="font-weight:700;font-size:14px">-</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">월간 수익률</span>
+            <span id="pv-return" style="font-weight:600">-</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--color-bg-secondary);border-radius:8px">
+            <span style="color:var(--color-text-tertiary)">저축률</span>
+            <span id="pv-savrate" style="font-weight:600">-</span>
+          </div>
+        </div>
+      </div>
+    `, (formData) => {
+      const ym = formData.yearMonth;
+      const cash = Number(formData.cashTotal || 0);
+      store.closeMonth(ym, cash);
+      showToast(existing ? '월간 데이터가 수정되었습니다' : '이번 달 마감이 완료되었습니다');
       window.__refreshSection('summary');
     });
 
     const modal = document.querySelector('.modal');
     if (!modal) return;
 
-    const runAutoCalc = (e) => {
-      if (e && e.isTrusted === false) return;
+    const runPreview = () => {
       const ym = modal.querySelector('#field-yearMonth').value;
-      const income = Number(modal.querySelector('#field-income').value || 0);
-      const invest = Number(modal.querySelector('#field-investTotal').value || 0);
       const cash = Number(modal.querySelector('#field-cashTotal').value || 0);
-      const pension = Number(modal.querySelector('#field-pensionTotal').value || 0);
-      const savings = Number(modal.querySelector('#field-savings').value || 0);
+      if (!ym) return;
 
-      const currAssets = invest + cash + pension;
-      updateFormField('totalAssets', currAssets);
-      if (income > 0) updateFormField('savingsRate', (savings / income) * 100);
-
-      const mAll = store.getSummaryMonths();
-      const sorted = [...mAll].sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
-      const filtered = sorted.filter(m => existing ? m.id !== existing.id : true);
-      const prevMonth = filtered.filter(m => m.yearMonth < ym).pop();
-      const first = filtered[0] || (existing ? sorted[0] : null);
-
-      if (prevMonth && prevMonth.totalAssets > 0) {
-        const growth = (currAssets - prevMonth.totalAssets) / prevMonth.totalAssets;
-        updateFormField('monthlyGrowth', growth * 100);
-        if (first && first.totalAssets > 0) {
-          const cGrowth = (currAssets - first.totalAssets) / first.totalAssets;
-          updateFormField('cumGrowth', cGrowth * 100);
-        }
-        const netProfit = (currAssets - prevMonth.totalAssets) - savings;
-        updateFormField('monthlyReturn', (netProfit / prevMonth.totalAssets) * 100);
-      }
+      const computed = store.computeMonthSummary(ym, cash);
+      const pv = (id, val) => { const el = modal.querySelector(id); if (el) el.textContent = val; };
+      pv('#pv-invest', fmtPreview(computed.investTotal));
+      pv('#pv-pension', fmtPreview(computed.pensionTotal));
+      pv('#pv-income', fmtPreview(computed.income));
+      pv('#pv-savings', fmtPreview(computed.savings));
+      pv('#pv-total', fmtPreview(computed.totalAssets));
+      pv('#pv-return', fmtPctPreview(computed.monthlyReturn));
+      pv('#pv-savrate', fmtPctPreview(computed.savingsRate));
     };
 
-    modal.querySelector('#btn-autofill').addEventListener('click', () => {
-      const ym = modal.querySelector('#field-yearMonth').value;
-      const mIncome = store.getMonthlyIncomeTotal(ym);
-      const mExpense = store.getMonthlyExpenseTotal(ym);
-      updateFormField('income', mIncome);
-      updateFormField('savings', mIncome - mExpense);
-      if (ym === thisMonth) {
-        updateFormField('investTotal', store.getCurrentHoldingsTotal());
-      }
-      showToast(`${ym} 데이터를 불러왔습니다.`);
-      runAutoCalc();
-    });
-
-    ['yearMonth', 'income', 'investTotal', 'cashTotal', 'pensionTotal', 'savings', 'monthlyReturn'].forEach(name => {
+    ['yearMonth', 'cashTotal'].forEach(name => {
       const input = modal.querySelector(`#field-${name}`);
       if (input) {
-        input.addEventListener('input', runAutoCalc);
-        input.addEventListener('change', runAutoCalc);
+        input.addEventListener('input', runPreview);
+        input.addEventListener('change', runPreview);
       }
     });
-    setTimeout(() => runAutoCalc(), 100);
+    setTimeout(() => runPreview(), 100);
   };
 
   const deleteMonth = async (id) => {
@@ -517,7 +491,10 @@ export function renderSummary(container, data, store) {
         <h1 class="section-title">자산 요약</h1>
         <p class="section-subtitle">월간 자산 기록 현황과 재무 지표를 확인하세요</p>
       </div>
-      <button class="btn-add" id="btn-add-summary">+ 월간 데이터 추가</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-add" id="btn-close-month" style="background:linear-gradient(135deg,#3182f6,#6c5ce7);border:none;color:#fff">⚡ 이번 달 마감</button>
+        <button class="btn-add" id="btn-add-summary" style="background:var(--color-bg-secondary);color:var(--color-text-primary);border:1px solid var(--color-border-light)">+ 과거 데이터 추가</button>
+      </div>
     </div>
 
     ${months.length === 0 ? `
@@ -600,6 +577,7 @@ export function renderSummary(container, data, store) {
                 <td class="text-right">${formatKRW(m.savings)}</td>
                 <td>
                   <div style="display:flex;gap:4px">
+                    <button class="btn-delete" data-recalc-month="${m.id}" title="재계산" style="color:var(--color-primary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115.36-6.36L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15.36 6.36L3 16"/></svg></button>
                     <button class="btn-delete" data-edit-month="${m.id}" title="수정" style="color:var(--color-text-secondary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                     <button class="btn-delete" data-delete-month="${m.id}" title="삭제"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
                   </div>
@@ -614,11 +592,25 @@ export function renderSummary(container, data, store) {
   `;
 
   // Event Listeners
+  const btnCloseMonth = container.querySelector('#btn-close-month');
+  if (btnCloseMonth) btnCloseMonth.addEventListener('click', () => openAddModal());
+
   const btnAdd = container.querySelector('#btn-add-summary');
   if (btnAdd) btnAdd.addEventListener('click', () => openAddModal());
 
   container.querySelectorAll('[data-edit-month]').forEach(btn => {
     btn.addEventListener('click', () => openAddModal(months.find(m => m.id === Number(btn.dataset.editMonth))));
+  });
+  container.querySelectorAll('[data-recalc-month]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const m = months.find(m => m.id === Number(btn.dataset.recalcMonth));
+      if (!m) return;
+      const ok = await confirmDialog(`${m.yearMonth} 데이터를 재계산하시겠습니까?\n현금 잔액은 유지하고 수입/지출/투자 데이터를 다시 계산합니다.`, { confirmText: '재계산', danger: false });
+      if (!ok) return;
+      store.closeMonth(m.yearMonth, m.cashTotal || 0);
+      showToast(`${m.yearMonth} 데이터가 재계산되었습니다`);
+      window.__refreshSection('summary');
+    });
   });
   container.querySelectorAll('[data-delete-month]').forEach(btn => {
     btn.addEventListener('click', () => deleteMonth(Number(btn.dataset.deleteMonth)));

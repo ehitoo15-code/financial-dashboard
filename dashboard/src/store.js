@@ -294,6 +294,132 @@ class DataStore {
             .reduce((sum, i) => sum + (i.amount || 0), 0);
     }
 
+    // --- Auto-Compute Helpers ---
+    static PENSION_ACCOUNTS = ['연저펀1', '연저펀2', 'IRP'];
+
+    /** 연금 계좌 holdings의 evalAmount 합계 */
+    getPensionTotal() {
+        return this._data.holdings
+            .filter(h => DataStore.PENSION_ACCOUNTS.includes(h.account))
+            .reduce((sum, h) => sum + (h.evalAmount || 0), 0);
+    }
+
+    /** 투자 합계: 연금 계좌 제외 holdings의 evalAmount 합계 */
+    getInvestTotal() {
+        return this._data.holdings
+            .filter(h => !DataStore.PENSION_ACCOUNTS.includes(h.account))
+            .reduce((sum, h) => sum + (h.evalAmount || 0), 0);
+    }
+
+    /**
+     * 주어진 월의 자산 요약을 자동 계산합니다.
+     * cashTotal만 외부에서 입력받고, 나머지는 모두 자동.
+     * @param {string} yearMonth - 'YYYY-MM'
+     * @param {number} cashTotal - 현금성 자산 잔액
+     * @returns {object} 계산된 월간 요약 데이터
+     */
+    computeMonthSummary(yearMonth, cashTotal) {
+        const income = this.getMonthlyIncomeTotal(yearMonth);
+        const expense = this.getMonthlyExpenseTotal(yearMonth);
+        const pensionTotal = this.getPensionTotal();
+        const investTotal = this.getInvestTotal();
+        const savings = income - expense;
+        const totalAssets = investTotal + cashTotal + pensionTotal;
+
+        // 이전 월 데이터 찾기
+        const allMonths = [...this.getSummaryMonths()].sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
+        const prevMonth = allMonths.filter(m => m.yearMonth < yearMonth).pop();
+        const firstMonth = allMonths[0];
+
+        // 수익률/증가율 계산
+        let monthlyReturn = 0, monthlyGrowth = 0, cumReturn = 0, cumGrowth = 0;
+        const savingsRate = income > 0 ? savings / income : 0;
+
+        if (prevMonth && prevMonth.totalAssets > 0) {
+            const assetChange = totalAssets - prevMonth.totalAssets;
+            monthlyGrowth = assetChange / prevMonth.totalAssets;
+            const netProfit = assetChange - savings;
+            monthlyReturn = netProfit / prevMonth.totalAssets;
+        }
+
+        if (firstMonth && firstMonth.totalAssets > 0) {
+            cumGrowth = (totalAssets - firstMonth.totalAssets) / firstMonth.totalAssets;
+            // 누적 순수익률: 저축 누적을 뺀 자산 성장
+            const totalSavings = allMonths.filter(m => m.yearMonth <= yearMonth).reduce((s, m) => s + (m.savings || 0), 0) + savings;
+            const pureGrowth = totalAssets - firstMonth.totalAssets - totalSavings;
+            cumReturn = firstMonth.totalAssets > 0 ? pureGrowth / firstMonth.totalAssets : 0;
+        }
+
+        return {
+            yearMonth,
+            income,
+            totalAssets,
+            investTotal,
+            cashTotal,
+            pensionTotal,
+            monthlyReturn,
+            cumReturn,
+            monthlyGrowth,
+            cumGrowth,
+            savings,
+            savingsRate,
+        };
+    }
+
+    /**
+     * 월말 마감: cashTotal만 입력받아 스냅샷을 저장/업데이트합니다.
+     * @param {string} yearMonth - 'YYYY-MM'
+     * @param {number} cashTotal - 현금성 자산 잔액
+     * @returns {object} 저장된 월간 요약
+     */
+    closeMonth(yearMonth, cashTotal) {
+        const computed = this.computeMonthSummary(yearMonth, cashTotal);
+        // 기존에 같은 월 데이터가 있으면 업데이트, 없으면 추가
+        const existing = this._data.summaryMonths.find(m => m.yearMonth === yearMonth);
+        if (existing) {
+            Object.assign(existing, computed);
+            this.save();
+            return existing;
+        } else {
+            return this.addSummaryMonth(computed);
+        }
+    }
+
+    /**
+     * 전체 월 데이터를 재계산합니다.
+     * 각 월의 cashTotal을 유지한 채 나머지 파생 값만 다시 계산합니다.
+     */
+    recalculateAllMonths() {
+        const sorted = [...this._data.summaryMonths].sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
+        for (let i = 0; i < sorted.length; i++) {
+            const m = sorted[i];
+            const income = this.getMonthlyIncomeTotal(m.yearMonth);
+            const expense = this.getMonthlyExpenseTotal(m.yearMonth);
+            const savings = income - expense;
+            // cashTotal, investTotal, pensionTotal은 스냅샷 값 유지 (과거 보유종목 상태를 반영할 수 없으므로)
+            const totalAssets = (m.investTotal || 0) + (m.cashTotal || 0) + (m.pensionTotal || 0);
+            const prev = i > 0 ? sorted[i - 1] : null;
+            const first = sorted[0];
+
+            let monthlyReturn = 0, monthlyGrowth = 0, cumGrowth = 0, cumReturn = 0;
+            const savingsRate = income > 0 ? savings / income : 0;
+
+            if (prev && prev.totalAssets > 0) {
+                const change = totalAssets - prev.totalAssets;
+                monthlyGrowth = change / prev.totalAssets;
+                monthlyReturn = (change - savings) / prev.totalAssets;
+            }
+            if (first && first.totalAssets > 0 && i > 0) {
+                cumGrowth = (totalAssets - first.totalAssets) / first.totalAssets;
+                const totalSav = sorted.slice(0, i + 1).reduce((s, x) => s + (x.savings || 0), 0);
+                cumReturn = (totalAssets - first.totalAssets - totalSav) / first.totalAssets;
+            }
+
+            Object.assign(m, { income, savings, totalAssets, savingsRate, monthlyReturn, monthlyGrowth, cumReturn, cumGrowth });
+        }
+        this.save();
+    }
+
     // --- CRUD: Market data ---
     getMarketData() { return this._data.marketData || []; }
 
