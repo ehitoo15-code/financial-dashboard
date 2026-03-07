@@ -154,6 +154,7 @@ const POPULAR_TICKERS = [
     { name: 'VOO (Vanguard S&P500)', ticker: 'VOO', exchange: 'NYSE' },
     { name: 'VTI (Vanguard Total Market)', ticker: 'VTI', exchange: 'NYSE' },
     { name: 'QQQ (Invesco Nasdaq100)', ticker: 'QQQ', exchange: 'NASDAQ' },
+    { name: 'QQQM (Invesco Nasdaq100 Mini)', ticker: 'QQQM', exchange: 'NASDAQ' },
     { name: 'SPY (SPDR S&P500)', ticker: 'SPY', exchange: 'NYSE' },
     { name: 'IVV (iShares S&P500)', ticker: 'IVV', exchange: 'NYSE' },
     { name: 'VGT (Vanguard IT)', ticker: 'VGT', exchange: 'NYSE' },
