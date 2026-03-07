@@ -13,7 +13,12 @@ export function renderPortfolio(container, data, store) {
   const totalProfit = totalValue - totalCost;
   const returnRate = totalCost ? totalProfit / totalCost : 0;
 
+  const FOREIGN_EXCHANGES = ['NASDAQ', 'NYSE', 'AMEX'];
+  const isUsdExchange = (exch) => FOREIGN_EXCHANGES.includes(exch);
+
   const openAddModal = (existing = null) => {
+    const existingIsUsd = existing && isUsdExchange(existing.exchange);
+
     openModal(existing ? '보유 종목 수정' : '보유 종목 추가', `
       <div id="stock-search-container" style="position:relative">
         ${formField('name', '종목명 (자동완성)', 'text', {
@@ -45,27 +50,71 @@ export function renderPortfolio(container, data, store) {
       })
     )}
       <div class="divider" style="margin: var(--space-lg) 0; height: 1px; background: var(--color-border-light)"></div>
+
+      <!-- USD 환율 입력 행 (해외 거래소 선택 시에만 표시) -->
+      <div id="usd-rate-row" style="display:${existingIsUsd ? 'flex' : 'none'}; align-items:center; gap:8px; margin-bottom:var(--space-lg); padding:10px 14px; background:rgba(49,130,246,0.07); border-radius:10px; border:1px solid rgba(49,130,246,0.2)">
+        <span style="font-size:13px">💱</span>
+        <span style="font-size:12px; font-weight:600; color:var(--color-primary); white-space:nowrap">USD/KRW 환율</span>
+        <input id="field-fxrate" type="number" step="0.1" value="${existing?.fxRate || ''}" placeholder="예: 1380.5" style="flex:1; padding:6px 10px; border-radius:8px; border:1px solid var(--color-border-light); font-size:13px; background:var(--color-bg-primary)">
+        <button type="button" id="btn-fetch-rate" class="btn btn-secondary btn-sm" style="white-space:nowrap">⚡ 실시간</button>
+        <span style="font-size:11px; color:var(--color-text-tertiary); white-space:nowrap">원/달러</span>
+      </div>
+
       ${formRow(
       formField('qty', '보유 수량 (최대 소수점 8자리)', 'number', { required: true, value: existing?.qty || '', step: '0.00000001' }),
-      formField('avgPrice', '매입 평단가 (원화 기준)', 'number', { required: true, value: existing?.avgPrice || '', step: '0.01' })
+      `<div class="form-group">
+        <label class="form-label" id="label-avgPrice">매입 평단가</label>
+        <input type="number" name="avgPrice" id="field-avgPrice" required step="0.01"
+          value="${existingIsUsd ? (existing?.avgPriceUsd || existing?.avgPrice || '') : (existing?.avgPrice || '')}"
+          placeholder="${existingIsUsd ? '달러 금액 (예: 185.50)' : '원화 금액'}" class="form-input">
+      </div>`
     )}
       ${formRow(
-      formField('price', '현재가 (원화 기준)', 'number', { required: true, value: existing?.price || '', step: '0.01' }),
+      `<div class="form-group">
+        <label class="form-label" id="label-price">현재가</label>
+        <input type="number" name="price" id="field-price" required step="0.01"
+          value="${existingIsUsd ? (existing?.priceUsd || existing?.price || '') : (existing?.price || '')}"
+          placeholder="${existingIsUsd ? '달러 금액 (예: 190.00)' : '원화 금액'}" class="form-input">
+      </div>`,
       `<div class="form-group" style="display:none">
               <input type="hidden" name="cost" id="field-cost" value="${existing?.cost || 0}">
               <input type="hidden" name="evalAmount" id="field-evalAmount" value="${existing?.evalAmount || 0}">
               <input type="hidden" name="returnPct" id="field-returnPct" value="${existing ? (existing.returnPct * 100).toFixed(2) : 0}">
             </div>`
     )}
-      <p style="font-size:12px; color:var(--color-text-tertiary); margin-top: -8px;">
+      <!-- KRW 환산 미리보기 (USD 모드일 때) -->
+      <div id="krw-preview" style="display:${existingIsUsd ? 'flex' : 'none'}; gap:16px; padding:8px 12px; border-radius:8px; background:var(--color-bg-secondary); margin-bottom:8px; font-size:11px; color:var(--color-text-tertiary)">
+        <span>평단가 ≈ <strong id="krw-avg">-</strong></span>
+        <span>현재가 ≈ <strong id="krw-cur">-</strong></span>
+        <span>평가금 ≈ <strong id="krw-eval">-</strong></span>
+      </div>
+      <p style="font-size:12px; color:var(--color-text-tertiary); margin-top: -4px;">
         * 매입금액, 평가금액, 수익률은 입력한 값을 바탕으로 자동 계산되어 저장됩니다.<br/>
-        * 해외 주식의 경우 "현재가 불러오기" 클릭 시 실시간 환율이 자동 적용됩니다.<br/>
+        * <span id="hint-usd" style="display:${existingIsUsd ? 'inline' : 'none'}; color:var(--color-primary); font-weight:600">해외 종목: 달러(USD)로 입력 → 환율 적용해 원화로 저장됩니다.</span>
+        <span id="hint-krw" style="display:${existingIsUsd ? 'none' : 'inline'}">해외 주식의 경우 "현재가 불러오기" 클릭 시 실시간 환율이 자동 적용됩니다.</span><br/>
         * 업비트(암호화폐)의 경우 원화 현재가가 직접 적용됩니다.
       </p>
     `, async (formData) => {
+      const exch = formData.exchange;
       const qty = Number(formData.qty);
-      const avg = Number(formData.avgPrice);
-      const cur = Number(formData.price);
+      const isUsd = isUsdExchange(exch);
+      const modal = document.querySelector('.modal');
+      const fxRateField = modal?.querySelector('#field-fxrate');
+      const fxRate = fxRateField ? Number(fxRateField.value || 0) : 0;
+
+      let avg, cur, avgUsd, curUsd;
+      if (isUsd && fxRate > 0) {
+        avgUsd = Number(formData.avgPrice);
+        curUsd = Number(formData.price);
+        avg = avgUsd * fxRate;
+        cur = curUsd * fxRate;
+      } else {
+        avg = Number(formData.avgPrice);
+        cur = Number(formData.price);
+        avgUsd = null;
+        curUsd = null;
+      }
+
       const cost = qty * avg;
       const evalAmt = qty * cur;
       const retCount = cost > 0 ? (evalAmt - cost) / cost : 0;
@@ -73,13 +122,14 @@ export function renderPortfolio(container, data, store) {
       const payload = {
         name: formData.name,
         ticker: formData.ticker,
-        exchange: formData.exchange,
+        exchange: exch,
         account: formData.account,
         group: formData.group,
-        qty: qty,
+        qty,
         avgPrice: avg,
         price: cur,
-        cost: cost,
+        ...(avgUsd !== null && { avgPriceUsd: avgUsd, priceUsd: curUsd, fxRate }),
+        cost,
         evalAmount: evalAmt,
         profit: evalAmt - cost,
         returnPct: retCount
@@ -105,6 +155,58 @@ export function renderPortfolio(container, data, store) {
     const fetchBtn = modal.querySelector('#btn-fetch-price');
     const resultsDiv = modal.querySelector('#stock-autocomplete-results');
     const rateInfo = modal.querySelector('#rate-info');
+    const usdRateRow = modal.querySelector('#usd-rate-row');
+    const krwPreview = modal.querySelector('#krw-preview');
+    const fxRateInput = modal.querySelector('#field-fxrate');
+    const fetchRateBtn = modal.querySelector('#btn-fetch-rate');
+    const labelAvg = modal.querySelector('#label-avgPrice');
+    const labelCur = modal.querySelector('#label-price');
+    const priceInput = modal.querySelector('#field-price');
+    const avgInput = modal.querySelector('#field-avgPrice');
+    const qtyInput = modal.querySelector('#field-qty');
+    const hintUsd = modal.querySelector('#hint-usd');
+    const hintKrw = modal.querySelector('#hint-krw');
+
+    // Switch between KRW and USD input mode
+    const updateCurrencyMode = () => {
+      const exch = exchangeInput.value;
+      const usd = isUsdExchange(exch);
+      usdRateRow.style.display = usd ? 'flex' : 'none';
+      krwPreview.style.display = usd ? 'flex' : 'none';
+      hintUsd.style.display = usd ? 'inline' : 'none';
+      hintKrw.style.display = usd ? 'none' : 'inline';
+      if (labelAvg) labelAvg.textContent = usd ? '매입 평단가 (USD $)' : '매입 평단가 (원화 ₩)';
+      if (labelCur) labelCur.textContent = usd ? '현재가 (USD $)' : '현재가 (원화 ₩)';
+      if (usd) {
+        priceInput?.setAttribute('placeholder', '달러 금액 (예: 190.00)');
+        avgInput?.setAttribute('placeholder', '달러 금액 (예: 185.50)');
+      } else {
+        priceInput?.setAttribute('placeholder', '원화 금액');
+        avgInput?.setAttribute('placeholder', '원화 금액');
+      }
+      updateKrwPreview();
+    };
+
+    // Live KRW preview
+    const updateKrwPreview = () => {
+      const rate = Number(fxRateInput?.value || 0);
+      const avg = Number(avgInput?.value || 0);
+      const cur = Number(priceInput?.value || 0);
+      const qty = Number(qtyInput?.value || 0);
+      if (!isUsdExchange(exchangeInput.value) || rate <= 0) return;
+      const fmt = (v) => v ? '₩' + Math.round(v).toLocaleString() : '-';
+      const krwAvg = modal.querySelector('#krw-avg');
+      const krwCur = modal.querySelector('#krw-cur');
+      const krwEval = modal.querySelector('#krw-eval');
+      if (krwAvg) krwAvg.textContent = fmt(avg * rate);
+      if (krwCur) krwCur.textContent = fmt(cur * rate);
+      if (krwEval) krwEval.textContent = fmt(cur * rate * qty);
+    };
+
+    exchangeInput?.addEventListener('change', updateCurrencyMode);
+    [fxRateInput, priceInput, avgInput, qtyInput].forEach(el =>
+      el?.addEventListener('input', updateKrwPreview)
+    );
 
     // Real-time Autocomplete
     let searchTimeout;
@@ -130,6 +232,7 @@ export function renderPortfolio(container, data, store) {
               updateFormField('ticker', item.dataset.ticker);
               updateFormField('exchange', item.dataset.exch);
               resultsDiv.style.display = 'none';
+              updateCurrencyMode();
               fetchBtn.click();
             });
           });
@@ -146,6 +249,20 @@ export function renderPortfolio(container, data, store) {
       }
     });
 
+    // Fetch live exchange rate
+    if (fetchRateBtn) {
+      fetchRateBtn.addEventListener('click', async () => {
+        fetchRateBtn.textContent = '⌛...';
+        fetchRateBtn.disabled = true;
+        const rate = await getExchangeRate();
+        if (fxRateInput) fxRateInput.value = rate.toFixed(1);
+        rateInfo.textContent = `환율: ₩${rate.toFixed(1)}`;
+        updateKrwPreview();
+        fetchRateBtn.textContent = '⚡ 실시간';
+        fetchRateBtn.disabled = false;
+      });
+    }
+
     // Price fetching
     fetchBtn.addEventListener('click', async () => {
       const ticker = tickerInput.value;
@@ -157,25 +274,30 @@ export function renderPortfolio(container, data, store) {
 
       const price = await fetchCurrentPrice(ticker, exch);
       if (price !== null) {
-        let finalPrice = price;
         if (exch === 'UPBIT') {
-          // 업비트 코인은 원화 기준으로 직접 반환
+          updateFormField('price', price);
           showToast(`현재가 ₩${price.toLocaleString()} 반영 완료`);
           rateInfo.textContent = '';
-        } else if (exch !== 'KRX' && exch !== 'KOSDAQ') {
+        } else if (isUsdExchange(exch)) {
+          // USD 모드: USD 가격을 price 필드에 그대로 넣고, 환율도 채워줌
           const rate = await getExchangeRate();
-          finalPrice = price * rate;
-          rateInfo.textContent = `실시간 환율: ₩${rate.toFixed(1)}`;
-          showToast(`현재가 $${price.toFixed(2)} 반영 완료`);
+          if (fxRateInput) fxRateInput.value = rate.toFixed(1);
+          updateFormField('price', price.toFixed(2));
+          rateInfo.textContent = `환율: ₩${rate.toFixed(1)}`;
+          showToast(`현재가 $${price.toFixed(2)}, 환율 ₩${rate.toFixed(1)} 반영`);
+          updateKrwPreview();
         } else {
+          updateFormField('price', price);
           showToast(`현재가 ₩${price.toLocaleString()} 반영 완료`);
           rateInfo.textContent = '';
         }
-        updateFormField('price', finalPrice);
       }
       fetchBtn.disabled = false;
       fetchBtn.textContent = '⚡ 현재가 불러오기';
     });
+
+    // Init mode on open
+    updateCurrencyMode();
   };
 
   const deleteItem = (id) => {
@@ -247,7 +369,7 @@ export function renderPortfolio(container, data, store) {
               <tr>
                 <td style="font-weight:600">${h.name} <br/><span style="font-size:11px;color:var(--color-text-tertiary)">${h.ticker || ''}</span></td>
                 <td><div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px">${h.group}</div><span class="account-tag ${h.account.includes('연저펀') ? 'account-tag-pension' : h.account.includes('ISA') ? 'account-tag-isa' : 'account-tag-general'}">${h.account}</span></td>
-                <td class="text-right">${formatFullKRW(h.price)}</td>
+              <td class="text-right">${h.priceUsd ? `$${h.priceUsd.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}<br><span style="font-size:10px;color:var(--color-text-tertiary)">${formatFullKRW(h.price)}</span>` : formatFullKRW(h.price)}</td>
                 <td class="text-right">${Number(h.qty)}</td>
                 <td class="text-right" style="font-weight:600">${formatFullKRW(h.evalAmount)}</td>
                 <td class="text-right"><span class="${getChangeClass(h.returnPct)}">${formatPercent(h.returnPct)}</span></td>
