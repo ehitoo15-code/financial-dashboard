@@ -25,15 +25,15 @@ export function renderPortfolio(container, data, store) {
         <div id="stock-autocomplete-results" class="autocomplete-results" style="display:none"></div>
       </div>
       ${formRow(
-      formField('ticker', '티커 (종목번호)', 'text', { required: true, value: existing?.ticker || '', placeholder: 'AAPL' }),
-      formField('exchange', '거래소', 'select', { required: true, value: existing?.exchange || 'KRX', selectOptions: ['KRX', 'NASDAQ', 'NYSE', 'AMEX', 'KOSDAQ'] })
+      formField('ticker', '티커 (종목번호/코인심볼)', 'text', { required: true, value: existing?.ticker || '', placeholder: 'AAPL · 005930 · BTC' }),
+      formField('exchange', '거래소', 'select', { required: true, value: existing?.exchange || 'KRX', selectOptions: ['KRX', 'KOSDAQ', 'NASDAQ', 'NYSE', 'AMEX', 'UPBIT'] })
     )}
       <div style="margin-bottom: var(--space-lg); display: flex; justify-content: flex-end; gap: 8px; align-items: center;">
         <span id="rate-info" style="font-size: 11px; color: var(--color-text-tertiary)"></span>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-fetch-price">⚡ 현재가 불러오기</button>
       </div>
       ${formRow(
-      formField('account', '계좌', 'select', { required: true, value: existing?.account || '', selectOptions: ['연저펀1', '연저펀2', 'IRP', 'ISA 중개형', '일반 국내', '일반 해외', '토스증권', '기타'] }),
+      formField('account', '계좌', 'select', { required: true, value: existing?.account || '', selectOptions: ['연저펀1', '연저펀2', 'IRP', 'ISA 중개형', '일반 국내', '일반 해외', '토스증권', '업비트', '기타'] }),
       formField('group', '분류 그룹', 'select', {
         required: true,
         value: existing?.group || '',
@@ -59,7 +59,8 @@ export function renderPortfolio(container, data, store) {
     )}
       <p style="font-size:12px; color:var(--color-text-tertiary); margin-top: -8px;">
         * 매입금액, 평가금액, 수익률은 입력한 값을 바탕으로 자동 계산되어 저장됩니다.<br/>
-        * 해외 종목의 경우 "현재가 불러오기" 클릭 시 실시간 환율이 자동 적용됩니다.
+        * 해외 주식의 경우 "현재가 불러오기" 클릭 시 실시간 환율이 자동 적용됩니다.<br/>
+        * 업비트(암호화폐)의 경우 원화 현재가가 직접 적용됩니다.
       </p>
     `, async (formData) => {
       const qty = Number(formData.qty);
@@ -157,7 +158,11 @@ export function renderPortfolio(container, data, store) {
       const price = await fetchCurrentPrice(ticker, exch);
       if (price !== null) {
         let finalPrice = price;
-        if (exch !== 'KRX' && exch !== 'KOSDAQ') {
+        if (exch === 'UPBIT') {
+          // 업비트 코인은 원화 기준으로 직접 반환
+          showToast(`현재가 ₩${price.toLocaleString()} 반영 완료`);
+          rateInfo.textContent = '';
+        } else if (exch !== 'KRX' && exch !== 'KOSDAQ') {
           const rate = await getExchangeRate();
           finalPrice = price * rate;
           rateInfo.textContent = `실시간 환율: ₩${rate.toFixed(1)}`;
